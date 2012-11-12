@@ -8,6 +8,7 @@
 
 -compile(export_all).
 
+-record(state, {socket, nick}).
 
 start() ->
     gen_server:start(?MODULE, [], []).
@@ -18,26 +19,32 @@ stop(Pid) ->
     gen_server:call(Pid, quit).
 
 init([]) ->
+    BotName = "erbot",
     {ok, Socket} = gen_tcp:connect("irc.foonetic.net", 6667, [{packet, line}]),
-    register("erbot"),
-    {ok, Socket}.
+    register(BotName),
+    {ok, #state{socket=Socket, nick=BotName}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
-handle_call(quit, _From, Socket) ->
+handle_call(quit, _From, S = #state{socket=Socket}) ->
     ok = gen_tcp:close(Socket),
     io:format("Going down"),
-    {stop, normal, ok, Socket}.
+    {stop, normal, ok, S}.
 
-handle_cast({send, Reply}, Socket) ->
+handle_cast({send, Reply}, S = #state{socket=Socket}) ->
     gen_tcp:send(Socket, Reply),
-    io:format(">>>> ~s~n", [Reply]),
-    {noreply, Socket}.
+    io:format(">>>> ~p~n", [Reply]),
+    {noreply, S};
+handle_cast(try_new_nick, S = #state{nick=Nick}) ->
+    NewNick = Nick ++ "_",
+    register(NewNick),
+    {noreply, S#state{nick=NewNick}}.
+
 
 handle_info({tcp, _Socket, Message}, State) ->
     io:format("<<<< ~p~n", [Message]),
-    erbot_irc:message(self(), strip_crlf(Message)),
+    message(erbot_protocol:parse(strip_crlf(Message))),
     {noreply, State};
 handle_info(Unknown, State) ->
     io:format("got unknown message ~p~n", [Unknown]),
@@ -63,7 +70,10 @@ register(Name) ->
 join(Pid, Channel) ->
     reply(Pid, "JOIN " ++ Channel).
 
-message(Pid, "PING " ++ ServerName) ->
-    reply(Pid, "PONG " ++ ServerName);
-message(_Pid, _Data) ->
+message({"PING", ServerName}) ->
+    reply("PONG " ++ ServerName);
+message({_Prefix, "433", _NicknameInUse}) ->
+    gen_server:cast(self(), try_new_nick);
+message({Prefix, Command, Params}) ->
+    io:format("prefix ~p~n command ~p~n params ~p~n", [Prefix, Command, Params]),
     ok.
