@@ -8,7 +8,7 @@
 
 -compile(export_all).
 
--record(state, {socket, nick}).
+-record(state, {socket, nick, publisher}).
 
 start() ->
     gen_server:start(?MODULE, [], []).
@@ -21,8 +21,11 @@ stop(Pid) ->
 init([]) ->
     BotName = "erbot",
     {ok, Socket} = gen_tcp:connect("irc.foonetic.net", 6667, [{packet, line}]),
+    register(erbot, self()),
     register(BotName),
-    {ok, #state{socket=Socket, nick=BotName}}.
+    {ok, Publisher} = gen_event:start_link(),
+    gen_event:add_handler(Publisher, erbot_echo, self()),
+    {ok, #state{socket=Socket, nick=BotName, publisher=Publisher}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -44,7 +47,7 @@ handle_cast(try_new_nick, S = #state{nick=Nick}) ->
 
 handle_info({tcp, _Socket, Message}, State) ->
     io:format("<<<< ~p~n", [Message]),
-    message(erbot_protocol:parse(strip_crlf(Message))),
+    message(erbot_protocol:parse(strip_crlf(Message)), State),
     {noreply, State};
 handle_info(Unknown, State) ->
     io:format("got unknown message ~p~n", [Unknown]),
@@ -70,10 +73,24 @@ register(Name) ->
 join(Pid, Channel) ->
     reply(Pid, "JOIN " ++ Channel).
 
-message({"PING", ServerName}) ->
+send_message(Pid, Target, Message) ->
+    reply(Pid, string:join(["PRIVMSG", Target, Message], " ")).
+
+to_us(Target, #state{nick=Nick}) ->
+    Target =:= Nick.
+
+message({"PING", ServerName}, _S) ->
     reply("PONG " ++ ServerName);
-message({_Prefix, "433", _NicknameInUse}) ->
+message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
+    {Target, Message} = erbot_protocol:split_space(Rest),
+    case to_us(Target, S) of
+	true ->
+	    {Nick, _Name, _Host} = erbot_protocol:user(From),
+	    gen_event:notify(Publisher, {private_msg, Nick, Message});
+	false -> ok
+    end;
+message({_Prefix, "433", _NicknameInUse}, _S) ->
     gen_server:cast(self(), try_new_nick);
-message({Prefix, Command, Params}) ->
+message({Prefix, Command, Params}, _S) ->
     io:format("prefix ~p~n command ~p~n params ~p~n", [Prefix, Command, Params]),
     ok.
