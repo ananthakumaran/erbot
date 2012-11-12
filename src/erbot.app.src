@@ -1,0 +1,7 @@
+%%-*- mode:erlang -*-
+
+{application, erbot,
+ [{vsn, "1.0.0"},
+  {modules, [erbot, erbot_sup, erbot_irc]},
+  {mod, {erbot, []}}
+ ]}.
