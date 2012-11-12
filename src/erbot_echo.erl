@@ -7,8 +7,8 @@
 init(Client) ->
     {ok, Client}.
 
-handle_event({private_msg, Nick, Message}, Client) ->
-    erbot_irc:send_message(Client, Nick, Message ++ " echo"),
+handle_event({private_msg, Nick, "!echo " ++ Message}, Client) ->
+    erbot_irc:send_message(Client, Nick, "echo: " ++ Message),
     {ok, Client};
 handle_event(_, State) ->
     {ok, State}.

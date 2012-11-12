@@ -2,12 +2,11 @@
 
 {application, erbot,
  [{vsn, "1.0.0"},
-  {modules, [erbot, erbot_sup, erbot_irc, erbot_protocol, erbot_echo]},
   {mod, {erbot, []}},
   {registered, [erbot]},
   {env, [{host, "irc.foonetic.net"},
 	 {port, 6667},
 	 {channels, ["#activesphere"]},
 	 {bot_name, "erbot"},
-	 {plugins, [erbot_echo]}]}
+	 {plugins, [erbot_echo, erbot_cowsay]}]}
  ]}.

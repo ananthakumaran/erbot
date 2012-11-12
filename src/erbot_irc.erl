@@ -87,7 +87,7 @@ join(Pid, Channel) ->
     reply(Pid, "JOIN " ++ Channel).
 
 send_message(Pid, Target, Message) ->
-    reply(Pid, string:join(["PRIVMSG", Target, Message], " ")).
+    [reply(Pid, string:join(["PRIVMSG", Target, ":" ++ M], " ")) || M <- string:tokens(Message, "\n")].
 
 to_us(Target, #state{nick=Nick}) ->
     Target =:= Nick.
@@ -95,7 +95,7 @@ to_us(Target, #state{nick=Nick}) ->
 message({"PING", ServerName}, _S) ->
     reply("PONG " ++ ServerName);
 message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
-    {Target, Message} = erbot_protocol:split_space(Rest),
+    {Target, ":" ++ Message} = erbot_protocol:split_space(Rest),
     case to_us(Target, S) of
 	true ->
 	    {Nick, _Name, _Host} = erbot_protocol:user(From),
