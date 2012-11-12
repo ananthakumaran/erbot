@@ -3,7 +3,6 @@
 
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
 	 code_change/3, terminate/2]).
-
 -export([start/0, stop/1, start_link/0]).
 
 -compile(export_all).
@@ -12,6 +11,7 @@
 
 start() ->
     gen_server:start(?MODULE, [], []).
+
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
 
@@ -19,13 +19,9 @@ stop(Pid) ->
     gen_server:call(Pid, quit).
 
 init([]) ->
-    BotName = "erbot",
-    {ok, Socket} = gen_tcp:connect("irc.foonetic.net", 6667, [{packet, line}]),
     register(erbot, self()),
-    register(BotName),
-    {ok, Publisher} = gen_event:start_link(),
-    gen_event:add_handler(Publisher, erbot_echo, self()),
-    {ok, #state{socket=Socket, nick=BotName, publisher=Publisher}}.
+    self() ! start,
+    {ok, #state{}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -41,10 +37,26 @@ handle_cast({send, Reply}, S = #state{socket=Socket}) ->
     {noreply, S};
 handle_cast(try_new_nick, S = #state{nick=Nick}) ->
     NewNick = Nick ++ "_",
-    register(NewNick),
-    {noreply, S#state{nick=NewNick}}.
+    registerNick(NewNick),
+    {noreply, S#state{nick=NewNick}};
+handle_cast(welcome, S) ->
+    {ok, Channels} = application:get_env(channels),
+    [join(self(), Channel) || Channel <- Channels],
+    {noreply, S}.
 
 
+handle_info(start, State) ->
+    {ok, BotName} = application:get_env(bot_name),
+    {ok, Host} = application:get_env(host),
+    {ok, Port} = application:get_env(port),
+    {ok, Socket} = gen_tcp:connect(Host, Port, [{packet, line}]),
+    registerNick(BotName),
+
+    {ok, Publisher} = gen_event:start_link(),
+    {ok, Plugins} = application:get_env(plugins),
+    [gen_event:add_handler(Publisher, Plugin, self()) || Plugin <- Plugins],
+
+    {noreply, State#state{socket=Socket, nick=BotName, publisher=Publisher}};
 handle_info({tcp, _Socket, Message}, State) ->
     io:format("<<<< ~p~n", [Message]),
     message(erbot_protocol:parse(strip_crlf(Message)), State),
@@ -59,14 +71,15 @@ terminate(_Reason, _State) ->
 strip_crlf(Str) ->
     string:substr(Str, 1, length(Str) - 2).
 
-%% irc stuffs
+%% irc
+
 reply(Message) ->
     reply(self(), Message).
 reply(Pid, Message) ->
     Reply = Message ++ "\r\n",
     gen_server:cast(Pid, {send, Reply}).
 
-register(Name) ->
+registerNick(Name) ->
     reply("NICK " ++ Name),
     reply("USER " ++ Name ++ " 0 * :" ++ Name).
 
@@ -89,8 +102,9 @@ message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
 	    gen_event:notify(Publisher, {private_msg, Nick, Message});
 	false -> ok
     end;
+message({_Prefix, "001", _Welcome}, _S) ->
+    gen_server:cast(self(), welcome);
 message({_Prefix, "433", _NicknameInUse}, _S) ->
     gen_server:cast(self(), try_new_nick);
-message({Prefix, Command, Params}, _S) ->
-    io:format("prefix ~p~n command ~p~n params ~p~n", [Prefix, Command, Params]),
+message({_Prefix, _Command, _Params}, _S) ->
     ok.
