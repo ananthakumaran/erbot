@@ -54,7 +54,7 @@ handle_info(start, State) ->
 
     {ok, Publisher} = gen_event:start_link(),
     {ok, Plugins} = application:get_env(plugins),
-    [gen_event:add_handler(Publisher, Plugin, self()) || Plugin <- Plugins],
+    [gen_event:add_handler(Publisher, M, [self(), Args]) || {M, Args} <- Plugins],
 
     {noreply, State#state{socket=Socket, nick=BotName, publisher=Publisher}};
 handle_info({tcp, _Socket, Message}, State) ->

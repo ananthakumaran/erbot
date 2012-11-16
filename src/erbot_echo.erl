@@ -4,7 +4,7 @@
 -export([init/1, handle_event/2, handle_call/2, code_change/3, terminate/2,
 	handle_info/2]).
 
-init(Client) ->
+init([Client, []]) ->
     {ok, Client}.
 handle_event({Type, From, "!echo " ++ Message}, Client)
   when Type == private_msg; Type == channel_msg ->

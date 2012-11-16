@@ -4,9 +4,12 @@
  [{vsn, "1.0.0"},
   {mod, {erbot, []}},
   {registered, [erbot]},
+  {applications, [kernel, stdlib, sasl]},
   {env, [{host, "irc.foonetic.net"},
 	 {port, 6667},
 	 {channels, ["#activesphere"]},
 	 {bot_name, "erbot"},
-	 {plugins, [erbot_echo, erbot_cowsay]}]}
+	 {plugins,
+	  [{erbot_echo, []},
+	   {erbot_cowsay, []}]}]}
  ]}.

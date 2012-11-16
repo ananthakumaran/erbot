@@ -1,3 +1,5 @@
 ebin/*
 !ebin/.gitkeep
+rel
+rebar.config
 
