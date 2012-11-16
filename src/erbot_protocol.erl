@@ -15,7 +15,7 @@ split_space(M) ->
     end.
 
 user(MsgTarget) ->
-    case re:run(MsgTarget, ":(.+)?!~(.+)@(.+)", [{capture, [1, 2, 3], list}]) of
+    case re:run(MsgTarget, ":(.+)!(.+)@(.+)", [{capture, [1, 2, 3], list}]) of
 	{match, [Nick, Name, Host]} ->
 	    {Nick, Name, Host};
 	nomatch -> error
