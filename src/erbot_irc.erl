@@ -100,7 +100,8 @@ message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
 	true ->
 	    {Nick, _Name, _Host} = erbot_protocol:user(From),
 	    gen_event:notify(Publisher, {private_msg, Nick, Message});
-	false -> ok
+	false ->
+	    gen_event:notify(Publisher, {channel_msg, Target, Message})
     end;
 message({_Prefix, "001", _Welcome}, _S) ->
     gen_server:cast(self(), welcome);

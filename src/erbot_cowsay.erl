@@ -7,9 +7,10 @@
 init(Client) ->
     {ok, Client}.
 
-handle_event({private_msg, Nick, "!cowsay " ++ Message}, Client) ->
+handle_event({Type, From, "!cowsay " ++ Message}, Client)
+  when Type == private_msg; Type == channel_msg ->
     Cowsay = os:cmd("cowsay " ++ Message),
-    erbot_irc:send_message(Client, Nick, Cowsay),
+    erbot_irc:send_message(Client, From, Cowsay),
     {ok, Client};
 handle_event(_Event, State) ->
     io:format("no match"),
@@ -26,4 +27,3 @@ terminate(_Reason, _State) ->
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
