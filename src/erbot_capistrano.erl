@@ -43,12 +43,26 @@ cap(App, Cmd, Apps, Reply) ->
     end.
 
 run_cap_command(Dir, Cmd, Reply) ->
-    CapCommand = "bash -l -c 'git pull && bundle install && bundle exec cap " ++ Cmd ++ "'",
+    CapCommand = "bash -l -c 'git pull && bundle install --deployment && bundle exec cap " ++ Cmd ++ "'",
     Reply(CapCommand),
     case eunit_lib:command(CapCommand, Dir) of
-	{0, _Out} ->
-	    Reply("command finished successfully");
+	{0, Out} ->
+	    Reply("command finished successfully"),
+	    Reply(gist(Out));
 	{ExitCode, Out} ->
 	    Reply(lists:concat(["command exited with status ", ExitCode])),
-	    Reply(Out)
+	    Reply(gist(Out))
     end.
+
+
+gist(Text) ->
+    Url = "https://api.github.com/gists",
+    Body = {[{public, false},
+	     {files, {[{output.txt, {[{content, list_to_binary(Text)}]}}]}}]},
+    {ok, {_, _Headers, Result}} = httpc:request(post,
+						{Url, "text/json", [],
+						 ejson:encode(Body)}, [], []),
+    {Results} = ejson:decode(Result),
+    {_, {[{<<"output.txt">>, {FileAttributes}}]}} = lists:keyfind(<<"files">>, 1, Results),
+    {_, GistUrl} = lists:keyfind(<<"raw_url">>, 1, FileAttributes),
+    binary_to_list(GistUrl).
