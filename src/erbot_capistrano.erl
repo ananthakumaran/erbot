@@ -43,7 +43,8 @@ cap(App, Cmd, Apps, Reply) ->
     end.
 
 run_cap_command(Dir, Cmd, Reply) ->
-    CapCommand = "bash -l -c 'git pull && bundle exec cap " ++ Cmd ++ "'",
+    CapCommand = "bash -l -c 'git pull && bundle install && bundle exec cap " ++ Cmd ++ "'",
+    Reply(CapCommand),
     case eunit_lib:command(CapCommand, Dir) of
 	{0, _Out} ->
 	    Reply("command finished successfully");
