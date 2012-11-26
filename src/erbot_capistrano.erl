@@ -14,7 +14,7 @@ handle_event({Type, From, "!cap " ++ Rest}, S=#state{client=Client, apps=Apps})
     Reply = fun(Message) -> erbot_irc:send_message(Client, From, Message) end,
     case re:run(Rest, "(.+?) (.+)", [{capture, [1, 2], list}]) of
 	{match, [App, Cmd]} ->
-	    cap(App, Cmd, Apps, Reply);
+	    spawn(fun() -> cap(App, Cmd, Apps, Reply) end);
 	nomatch ->
 	    Reply("bad command. eg !cap app showcase deploy")
     end,
