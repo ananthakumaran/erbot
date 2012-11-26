@@ -4,20 +4,22 @@
 -export([init/1, handle_event/2, handle_call/2, code_change/3, terminate/2,
 	handle_info/2]).
 
-init([Client, []]) ->
+-record(state, {client, frequency}).
+
+init([Client, [{frequency, Frequency}]]) ->
     <<A:32, B:32, C:32>> = crypto:rand_bytes(12),
     random:seed(A,B,C),
-    {ok, Client}.
-handle_event({Type, From, "!fortune" ++ _Rest}, Client)
+    {ok, #state{client=Client, frequency=Frequency}}.
+handle_event({Type, From, "!fortune" ++ _Rest}, S=#state{client=Client})
   when Type == private_msg; Type == channel_msg ->
     erbot_irc:send_message(Client, From, fortune()),
-    {ok, Client};
-handle_event({_, From, _}, Client) ->
-    case random:uniform(10) of
-	5 -> erbot_irc:send_message(Client, From, fortune());
+    {ok, S};
+handle_event({_, From, _}, S=#state{client=Client, frequency=Frequency}) ->
+    case random:uniform(Frequency) of
+	1 -> erbot_irc:send_message(Client, From, fortune());
 	_ -> ok
     end,
-    {ok, Client};
+    {ok, S};
 handle_event(_, State) ->
     {ok, State}.
 
