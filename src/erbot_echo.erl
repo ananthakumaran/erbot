@@ -6,9 +6,11 @@
 
 init([Client, []]) ->
     {ok, Client}.
-handle_event({Type, From, "!echo " ++ Message}, Client)
-  when Type == private_msg; Type == channel_msg ->
-    erbot_irc:send_message(Client, From, "echo: " ++ Message),
+handle_event({private_msg, Nick, "!echo " ++ Message}, Client) ->
+    erbot_irc:send_message(Client, Nick, "echo: " ++ Message),
+    {ok, Client};
+handle_event({channel_msg, {_Nick, Channel}, "!echo " ++ Message}, Client) ->
+    erbot_irc:send_message(Client, Channel, "echo: " ++ Message),
     {ok, Client};
 handle_event(_, State) ->
     {ok, State}.

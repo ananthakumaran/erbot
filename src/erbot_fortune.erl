@@ -10,13 +10,17 @@ init([Client, [{frequency, Frequency}]]) ->
     <<A:32, B:32, C:32>> = crypto:rand_bytes(12),
     random:seed(A,B,C),
     {ok, #state{client=Client, frequency=Frequency}}.
-handle_event({Type, From, "!fortune" ++ _Rest}, S=#state{client=Client})
-  when Type == private_msg; Type == channel_msg ->
-    erbot_irc:send_message(Client, From, fortune()),
+
+handle_event({private_msg, Nick, "!fortune" ++ _Rest}, S=#state{client=Client}) ->
+    send_fortune(Client, Nick),
     {ok, S};
-handle_event({_, From, _}, S=#state{client=Client, frequency=Frequency}) ->
+handle_event({channel_msg, {_Nick, Channel}, "!fortune" ++ _Rest}, S=#state{client=Client}) ->
+    send_fortune(Client, Channel),
+    {ok, S};
+
+handle_event({channel_msg, {_Nick, Channel}, _}, S=#state{client=Client, frequency=Frequency}) ->
     case random:uniform(Frequency) of
-	1 -> erbot_irc:send_message(Client, From, fortune());
+	1 -> send_fortune(Client, Channel);
 	_ -> ok
     end,
     {ok, S};
@@ -37,3 +41,6 @@ terminate(_Reason, _State) ->
 
 fortune() ->
     os:cmd("fortune").
+
+send_fortune(Client, To) ->
+    erbot_irc:send_message(Client, To, fortune()).

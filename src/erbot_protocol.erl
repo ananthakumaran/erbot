@@ -1,6 +1,6 @@
 -module(erbot_protocol).
 
--export([parse/1, split_space/1, user/1]).
+-export([parse/1, split_space/1, user/1, members/1]).
 
 parse(M = ":" ++ _Rest) ->
     parse_prefix(M);
@@ -31,3 +31,10 @@ parse_prefix(M) ->
 
 parse_command(M) ->
     split_space(M).
+
+members(M) ->
+    case re:run(M, ".+ [=*@] (.+) :[^ ]* (.+)", [{capture, [1, 2], list}]) of
+	{match, [Channel, Members]} ->
+	    {Channel, string:tokens(Members, " ")};
+	nomatch -> error
+    end.

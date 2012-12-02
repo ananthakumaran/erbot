@@ -9,9 +9,8 @@
 init([Client, Apps]) ->
     {ok, #state{client=Client, apps=Apps}}.
 
-handle_event({Type, From, "!cap " ++ Rest}, S=#state{client=Client, apps=Apps})
-  when Type == private_msg; Type == channel_msg ->
-    Reply = fun(Message) -> erbot_irc:send_message(Client, From, Message) end,
+handle_event({channel_msg, {_Nick, Channel}, "!cap " ++ Rest}, S=#state{client=Client, apps=Apps}) ->
+    Reply = fun(Message) -> erbot_irc:send_message(Client, Channel, Message) end,
     case re:run(Rest, "(.+?) (.+)", [{capture, [1, 2], list}]) of
 	{match, [App, Cmd]} ->
 	    spawn(fun() -> cap(App, Cmd, Apps, Reply) end);

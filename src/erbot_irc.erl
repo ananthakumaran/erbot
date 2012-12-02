@@ -7,7 +7,7 @@
 
 -compile(export_all).
 
--record(state, {socket, nick, publisher}).
+-record(state, {socket, nick, publisher, users}).
 
 start() ->
     gen_server:start(?MODULE, [], []).
@@ -21,7 +21,7 @@ stop(Pid) ->
 init([]) ->
     register(erbot, self()),
     self() ! start,
-    {ok, #state{}}.
+    {ok, #state{users=orddict:new()}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -39,6 +39,15 @@ handle_cast(try_new_nick, S = #state{nick=Nick}) ->
     NewNick = Nick ++ "_",
     registerNick(NewNick),
     {noreply, S#state{nick=NewNick}};
+handle_cast({add_members, Channel, Members}, S = #state{users=Users, publisher=Publisher}) ->
+    NewUsers = case orddict:find(Channel, Users) of
+		   {ok, OldMembers} -> orddict:store(Channel,
+						     add_elements(OldMembers, Members),
+						     Users);
+		   error -> orddict:store(Channel, ordsets:from_list(Members), Users)
+	       end,
+    gen_event:notify(Publisher, {users, NewUsers}),
+    {noreply, S#state{users=NewUsers}};
 handle_cast(welcome, S) ->
     {ok, Channels} = application:get_env(channels),
     [join(self(), Channel) || Channel <- Channels],
@@ -86,6 +95,9 @@ registerNick(Name) ->
 join(Pid, Channel) ->
     reply(Pid, "JOIN " ++ Channel).
 
+members(Pid, Channel) ->
+    reply(Pid, "NAMES " ++ Channel).
+
 send_message(Pid, Target, Message) ->
     [reply(Pid, string:join(["PRIVMSG", Target, ":" ++ M], " ")) || M <- string:tokens(Message, "\n")].
 
@@ -95,17 +107,34 @@ to_us(Target, #state{nick=Nick}) ->
 message({"PING", ServerName}, _S) ->
     reply("PONG " ++ ServerName);
 message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
+    {Nick, _Name, _Host} = erbot_protocol:user(From),
     {Target, ":" ++ Message} = erbot_protocol:split_space(Rest),
     case to_us(Target, S) of
 	true ->
-	    {Nick, _Name, _Host} = erbot_protocol:user(From),
 	    gen_event:notify(Publisher, {private_msg, Nick, Message});
 	false ->
-	    gen_event:notify(Publisher, {channel_msg, Target, Message})
+	    gen_event:notify(Publisher, {channel_msg, {Nick, Target}, Message})
     end;
+message({From, "JOIN", Rest}, #state{publisher=Publisher}) ->
+    {Nick, _Name, _Host} = erbot_protocol:user(From),
+    ":" ++ Channel = Rest,
+    gen_server:cast(self(), {add_members, Channel, [Nick]}),
+    gen_event:notify(Publisher, {join, Nick, Channel}),
+    ok;
 message({_Prefix, "001", _Welcome}, _S) ->
     gen_server:cast(self(), welcome);
 message({_Prefix, "433", _NicknameInUse}, _S) ->
     gen_server:cast(self(), try_new_nick);
+message({_Prefix, "353", MembersList}, _S) ->
+    {Channel, Members} = erbot_protocol:members(MembersList),
+    gen_server:cast(self(), {add_members, Channel, Members}),
+    ok;
 message({_Prefix, _Command, _Params}, _S) ->
     ok.
+
+
+%% Utils
+add_elements(Set, [E | R]) ->
+    add_elements(ordsets:add_element(E, Set), R);
+add_elements(Set, []) ->
+    Set.
