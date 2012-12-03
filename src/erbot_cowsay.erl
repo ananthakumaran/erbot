@@ -14,7 +14,6 @@ handle_event({channel_msg, {_Nick, Channel}, "!cowsay " ++ Message}, Client) ->
     cowsay(Channel, Message, Client),
     {ok, Client};
 handle_event(_Event, State) ->
-    io:format("no match"),
     {ok, State}.
 
 handle_call(_Request, State) ->
