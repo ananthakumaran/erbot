@@ -13,7 +13,8 @@
           [{erbot_echo, []},
            {erbot_cowsay, []},
            {erbot_msg, []},
+           {erbot_alertme, []},
            {erbot_capistrano,[{app, "/Users/ananthakumaran/work/app"},
                              {api, "/Users/ananthakumaran/work/api"}]},
-           {erbot_fortune, [{frequency, 5}]}]}]}
+           {erbot_fortune, [{frequency, 50}]}]}]}
  ]}.
