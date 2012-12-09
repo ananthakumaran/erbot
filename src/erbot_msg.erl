@@ -9,8 +9,9 @@
 init([Client, []]) ->
     {ok, #state{client=Client, notify=orddict:new()}}.
 
-handle_event({channel_msg, {Nick, _Channel}, "!msg " ++ Message}, S) ->
+handle_event({channel_msg, {Nick, Channel}, "!msg " ++ Message}, S=#state{client=Client}) ->
     [To|Msg] = string:tokens(Message, " "),
+    erbot_irc:send_message(Client, Channel, "Yes sir."),
     {ok, S#state{notify=save_offline_msg(To, Nick, string:join(Msg, " "), S)}};
 handle_event({join, Nick, Channel}, S) ->
     {ok, S#state{notify=send_offline_msgs(Nick, Channel, S)}};
