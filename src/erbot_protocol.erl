@@ -9,24 +9,24 @@ parse(Message) ->
 
 split_space(M) ->
     case re:run(M, "(.+?) (.+)", [{capture, [1, 2], list}]) of
-	{match, [First, Rest]} ->
-	    {First, Rest};
-	nomatch -> error
+        {match, [First, Rest]} ->
+            {First, Rest};
+        nomatch -> error
     end.
 
 user(MsgTarget) ->
     case re:run(MsgTarget, ":(.+)!(.+)@(.+)", [{capture, [1, 2, 3], list}]) of
-	{match, [Nick, Name, Host]} ->
-	    {Nick, Name, Host};
-	nomatch -> error
+        {match, [Nick, Name, Host]} ->
+            {Nick, Name, Host};
+        nomatch -> error
     end.
 
 parse_prefix(M) ->
     {Prefix, Rest} = split_space(M),
     case parse_command(Rest) of
-	{Command, Params} ->
-	    {Prefix, Command, Params};
-	error -> error
+        {Command, Params} ->
+            {Prefix, Command, Params};
+        error -> error
     end.
 
 parse_command(M) ->
@@ -34,7 +34,7 @@ parse_command(M) ->
 
 members(M) ->
     case re:run(M, ".+ [=*@] (.+) :[^ ]* (.+)", [{capture, [1, 2], list}]) of
-	{match, [Channel, Members]} ->
-	    {Channel, string:tokens(Members, " ")};
-	nomatch -> error
+        {match, [Channel, Members]} ->
+            {Channel, string:tokens(Members, " ")};
+        nomatch -> error
     end.
