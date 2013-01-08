@@ -47,21 +47,8 @@ run_cap_command(Dir, Cmd, Reply) ->
     case eunit_lib:command(CapCommand, Dir) of
 	{0, Out} ->
 	    Reply("command finished successfully"),
-	    Reply(gist(Out));
+	    Reply(erbot_utils:gist(Out));
 	{ExitCode, Out} ->
 	    Reply(lists:concat(["command exited with status ", ExitCode])),
-	    Reply(gist(Out))
+	    Reply(erbot_utils:gist(Out))
     end.
-
-
-gist(Text) ->
-    Url = "https://api.github.com/gists",
-    Body = {[{public, false},
-	     {files, {[{output.txt, {[{content, list_to_binary(Text)}]}}]}}]},
-    {ok, {_, _Headers, Result}} = httpc:request(post,
-						{Url, "text/json", [],
-						 ejson:encode(Body)}, [], []),
-    {Results} = ejson:decode(Result),
-    {_, {[{<<"output.txt">>, {FileAttributes}}]}} = lists:keyfind(<<"files">>, 1, Results),
-    {_, GistUrl} = lists:keyfind(<<"raw_url">>, 1, FileAttributes),
-    binary_to_list(GistUrl).
