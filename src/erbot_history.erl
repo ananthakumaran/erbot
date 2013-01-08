@@ -107,8 +107,11 @@ search(Query, Reply) ->
         %% TODO validate matchspec. this will throw exception on bad spec
         %% don't call it directly. use safe_search
         MatchSpec ->
-            {Results, _Continuation} = dets:select(history, MatchSpec, 50),
-            Reply(render(Results))
+            case dets:select(history, MatchSpec, 50) of
+                {error, Reason} -> Reply(to_str({error, Reason}));
+                '$end_of_table' -> Reply(render([]));
+                {Results, _Continuation} -> Reply(render(Results))
+            end
     end.
 
 safe_search(Query, Reply) ->
