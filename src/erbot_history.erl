@@ -7,7 +7,7 @@
 -record(state, {client, dbpath}).
 -record(message, {timestamp, nick, channel, message}).
 
--define(Table, "history").
+-define(Table, history).
 
 init([Client, [{dbpath, Path}]]) ->
     self() ! start,
