@@ -2,5 +2,6 @@ ebin/*
 !ebin/.gitkeep
 rel
 deps/*
+log/*
 *.pyc
 
