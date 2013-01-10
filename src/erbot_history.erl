@@ -7,6 +7,8 @@
 -record(state, {client, dbpath}).
 -record(message, {timestamp, nick, channel, message}).
 
+-define(Table, "history").
+
 init([Client, [{dbpath, Path}]]) ->
     self() ! start,
     {ok, #state{client=Client, dbpath=Path}}.
@@ -41,8 +43,10 @@ terminate(_Reason, _State) ->
     ok.
 
 initialize_db(Path) ->
-    Name = history,
-    {ok, Name} = dets:open_file(Name, [{type, set}, {file, Path}, {keypos, #message.timestamp}]).
+    ?Table = lets:new(?Table,
+                      [ordered_set, public, named_table, {keypos, #message.timestamp},
+                       {db, [{path, Path}, create_if_missing]}]),
+    ok.
 
 
 string_join([], _Seperator) ->
@@ -107,7 +111,7 @@ search(Query, Reply) ->
         %% TODO validate matchspec. this will throw exception on bad spec
         %% don't call it directly. use safe_search
         MatchSpec ->
-            case dets:select(history, MatchSpec, 50) of
+            case lets:select_reverse(?Table, MatchSpec, 50) of
                 {error, Reason} -> Reply(to_str({error, Reason}));
                 '$end_of_table' -> Reply(render([]));
                 {Results, _Continuation} -> Reply(render(Results))
@@ -123,7 +127,7 @@ safe_search(Query, Reply) ->
 
 
 log(Nick, Channel, Message) ->
-    dets:insert(history, [#message{timestamp = erlang:now(), nick = Nick, channel = Channel, message = Message}]),
+    lets:insert(?Table, [#message{timestamp = erlang:now(), nick = Nick, channel = Channel, message = Message}]),
     ok.
 
 help(Reply) ->
@@ -140,4 +144,3 @@ std(Text) ->
 
 search(Query) ->
     search(Query, fun std/1).
-
