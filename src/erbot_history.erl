@@ -73,7 +73,7 @@ build_condition(Condition) ->
     [Field | [Predicate | Value]] = string:tokens(Condition, " "),
     case field_to_var(list_to_atom(Field)) of
         {F, undefined} -> erlang:error("unknown field " ++ F);
-        %% TODO handle timestamp value differently
+        {timestamp, Var} -> {predicate(Predicate), Var, triple_to_timestamp(gate:approxidate(string_join(Value, " ")))};
         {_, Var} -> {predicate(Predicate), Var, string_join(Value, " ")}
     end.
 
@@ -92,7 +92,7 @@ to_str(Any) ->
 
 
 format_time(Timestamp) ->
-    {{Y, M, D}, {H, Min, _S}} = calendar:now_to_datetime(Timestamp),
+    {{Y, M, D}, {H, Min, _S}} = calendar:now_to_datetime(timestamp_to_triple(Timestamp)),
     io_lib:format("~2..0b/~2..0b/~4..0b ~2..0b:~2..0b", [D, M, Y, H, Min]).
 
 format_message(#message{timestamp=Timestamp, nick=Nick, channel=Channel, message=Message}) ->
@@ -111,7 +111,7 @@ search(Query, Reply) ->
         %% TODO validate matchspec. this will throw exception on bad spec
         %% don't call it directly. use safe_search
         MatchSpec ->
-            case lets:select_reverse(?Table, MatchSpec, 50) of
+            case lets:select_reverse(?Table, MatchSpec, 500) of
                 {error, Reason} -> Reply(to_str({error, Reason}));
                 '$end_of_table' -> Reply(render([]));
                 {Results, _Continuation} -> Reply(render(Results))
@@ -127,11 +127,18 @@ safe_search(Query, Reply) ->
 
 
 log(Nick, Channel, Message) ->
-    lets:insert(?Table, [#message{timestamp = erlang:now(), nick = Nick, channel = Channel, message = Message}]),
+    lets:insert(?Table, [#message{timestamp = triple_to_timestamp(erlang:now()),
+                                  nick = Nick, channel = Channel, message = Message}]),
     ok.
 
+triple_to_timestamp({MegaSecs, Secs, MicroSecs}) ->
+    MegaSecs * 1000000000000 + Secs * 1000000 + MicroSecs.
+
+timestamp_to_triple(T) ->
+    {T div 1000000000000, (T div 1000000) rem 1000000, T rem 1000000}.
+
 help(Reply) ->
-    Reply("query irc logs\neg !log channel == activesphere").
+    Reply("\neg !log channel == #activesphere\neg !log timestamp >= yesterday, channel == #activesphere\navailable fields timestamp, channel, nick, message. by default will list the last 500 messages in desc order").
 
 help(Reply, Error) ->
     Reply(Error),
