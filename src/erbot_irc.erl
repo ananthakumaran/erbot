@@ -71,6 +71,12 @@ handle_info({tcp, _Socket, Message}, State) ->
     log("<<<< " ++ Message),
     message(erbot_protocol:parse(strip_crlf(Message)), State),
     {noreply, State#state{last_contact=now()}};
+handle_info({tcp_closed, _Socket}, State) ->
+    log("tcp_closed. quitting.."),
+    {stop, tcp_closed, State};
+handle_info({tcp_error, _Socket, Reason}, State) ->
+    log("tcp_error. quitting.."),
+    {stop, Reason, State};
 handle_info(routine_check, State) ->
     Diff = (erbot_utils:triple_to_timestamp(now()) - erbot_utils:triple_to_timestamp(State#state.last_contact)) div 1000000,
     case Diff < ?PING_TIMEOUT of
@@ -78,7 +84,7 @@ handle_info(routine_check, State) ->
             erlang:send_after(?ROUTINE_CHECK, self(), routine_check),
             {noreply, State};
         false ->
-            log("no message from server in the last " ++ integer_to_list(Diff) ++ " seconds. quiting.."),
+            log("no message from server in the last " ++ integer_to_list(Diff) ++ " seconds. quitting.."),
             {stop, ping_timeout, State}
     end;
 handle_info(Unknown, State) ->
