@@ -1,13 +1,14 @@
 -module(erbot_irc).
 -behaviour(gen_server).
 
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-	 code_change/3, terminate/2]).
+-export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -export([start/0, stop/1, start_link/0]).
 
 -compile(export_all).
 
--record(state, {socket, nick, publisher, users}).
+-define(ROUTINE_CHECK, 1000 * 60 * 1).
+-define(PING_TIMEOUT, 60 * 50).
+-record(state, {socket, nick, publisher, users, last_contact}).
 
 start() ->
     gen_server:start(?MODULE, [], []).
@@ -21,19 +22,19 @@ stop(Pid) ->
 init([]) ->
     register(erbot, self()),
     self() ! start,
-    {ok, #state{users=orddict:new()}}.
+    {ok, #state{users=orddict:new(), last_contact=now()}}.
 
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 handle_call(quit, _From, S = #state{socket=Socket}) ->
     ok = gen_tcp:close(Socket),
-    io:format("Going down"),
+    log("Going down"),
     {stop, normal, ok, S}.
 
 handle_cast({send, Reply}, S = #state{socket=Socket}) ->
     gen_tcp:send(Socket, Reply),
-    io:format(">>>> ~p~n", [Reply]),
+    log(">>>> " ++ Reply),
     {noreply, S};
 handle_cast(try_new_nick, S = #state{nick=Nick}) ->
     NewNick = Nick ++ "_",
@@ -64,14 +65,24 @@ handle_info(start, State) ->
     {ok, Publisher} = gen_event:start_link(),
     {ok, Plugins} = application:get_env(plugins),
     [gen_event:add_handler(Publisher, M, [self(), Args]) || {M, Args} <- Plugins],
-
+    erlang:send_after(?ROUTINE_CHECK, self(), routine_check),
     {noreply, State#state{socket=Socket, nick=BotName, publisher=Publisher}};
 handle_info({tcp, _Socket, Message}, State) ->
-    io:format("<<<< ~p~n", [Message]),
+    log("<<<< " ++ Message),
     message(erbot_protocol:parse(strip_crlf(Message)), State),
-    {noreply, State};
+    {noreply, State#state{last_contact=now()}};
+handle_info(routine_check, State) ->
+    Diff = (erbot_utils:triple_to_timestamp(now()) - erbot_utils:triple_to_timestamp(State#state.last_contact)) div 1000000,
+    case Diff < ?PING_TIMEOUT of
+        true ->
+            erlang:send_after(?ROUTINE_CHECK, self(), routine_check),
+            {noreply, State};
+        false ->
+            log("no message from server in the last " ++ integer_to_list(Diff) ++ " seconds. quiting.."),
+            {stop, ping_timeout, State}
+    end;
 handle_info(Unknown, State) ->
-    io:format("got unknown message ~p~n", [Unknown]),
+    log("got unknown message " ++ Unknown),
     {noreply, State}.
 
 terminate(_Reason, _State) ->
@@ -104,6 +115,10 @@ send_message(Pid, Target, Message) ->
 to_us(Target, #state{nick=Nick}) ->
     Target =:= Nick.
 
+-define(IGNORED_COMMANDS, ["NOTICE", "MODE", "002", "003", "004", "005",
+                           "251", "252", "253", "254", "255", "265", "266",
+                           "366", "372", "375", "376"]).
+
 message({"PING", ServerName}, _S) ->
     reply("PONG " ++ ServerName);
 message({From, "PRIVMSG", Rest}, S = #state{publisher=Publisher}) ->
@@ -129,8 +144,13 @@ message({_Prefix, "353", MembersList}, _S) ->
     {Channel, Members} = erbot_protocol:members(MembersList),
     gen_server:cast(self(), {add_members, Channel, Members}),
     ok;
-message({_Prefix, _Command, _Params}, _S) ->
-    ok.
+message({_Prefix, Command, Params}, _S) ->
+    case lists:member(Command, ?IGNORED_COMMANDS) of
+        true -> ok;
+        false ->
+            io:format("got unknown command ~p  params ~p ~n", [Command, Params]),
+            ok
+    end.
 
 
 %% Utils
@@ -138,3 +158,6 @@ add_elements(Set, [E | R]) ->
     add_elements(ordsets:add_element(E, Set), R);
 add_elements(Set, []) ->
     Set.
+
+log(Message) ->
+    io:format("~s ~p~n", [strftime:f(now(), "%D %T"), Message]).
