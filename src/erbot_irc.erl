@@ -7,7 +7,7 @@
 -compile(export_all).
 
 -define(ROUTINE_CHECK, 1000 * 60 * 1).
--define(PING_TIMEOUT, 60 * 50).
+-define(PING_TIMEOUT, 60 * 5).
 -record(state, {socket, nick, publisher, users, last_contact}).
 
 start() ->
