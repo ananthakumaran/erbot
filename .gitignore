@@ -4,4 +4,6 @@ rel
 deps/*
 log/*
 *.pyc
-
+.edts
+erl_crash.dump
+fabfile.py
