@@ -8,7 +8,7 @@
 -record(message, {timestamp, nick, channel, message}).
 
 -define(Table, history).
--define(MaxResults, 100).
+-define(MaxResults, 50).
 
 init([Client, [{dbpath, Path}]]) ->
     self() ! start,
