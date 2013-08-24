@@ -8,6 +8,7 @@
 -record(message, {timestamp, nick, channel, message}).
 
 -define(Table, history).
+-define(MaxResults, 100).
 
 init([Client, [{dbpath, Path}]]) ->
     self() ! start,
@@ -111,7 +112,7 @@ search(Query, Reply) ->
         %% TODO validate matchspec. this will throw exception on bad spec
         %% don't call it directly. use safe_search
         MatchSpec ->
-            case lets:select_reverse(?Table, MatchSpec, 500) of
+            case lets:select_reverse(?Table, MatchSpec, ?MaxResults) of
                 {error, Reason} -> Reply(to_str({error, Reason}));
                 '$end_of_table' -> Reply(render([]));
                 {Results, _Continuation} -> Reply(render(Results))
