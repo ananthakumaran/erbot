@@ -18,11 +18,6 @@ defmodule Erbot.Plugins.History do
     {:ok, s}
   end
 
-  def handle_event({:private_msg, nick, message}, s) do
-    log(nick, "#private", message)
-    {:ok, s}
-  end
-
   def handle_event({:channel_msg, {_nick, channel}, "!log" <> query}, s) do
     reply = fn(message) -> Erbot.Irc.send_message(s.client, channel, message) end
     safe_search(query, reply)
