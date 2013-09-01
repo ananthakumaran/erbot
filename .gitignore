@@ -7,3 +7,4 @@ log/*
 .edts
 erl_crash.dump
 fabfile.py
+*.ez

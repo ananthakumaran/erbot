@@ -1,3 +1,3 @@
 #!/bin/bash
 
-run_erl -daemon log/ log "exec erl -pa ebin deps/*/ebin -s erbot -name erbot@`hostname -s`"
+run_erl -daemon log/ log "exec elixir --no-halt --name erbot@`hostname -s` --sname erbot -S mix app.start"

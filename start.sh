@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec erl -pa ebin deps/*/ebin -s erbot -name erbot@`hostname -s`
+exec elixir --no-halt --name erbot@`hostname -s` --sname erbot -S mix app.start
