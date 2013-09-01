@@ -1,5 +1,4 @@
 [ "edown": {:git, "git://github.com/esl/edown.git", "1f6954ce8f313139385110f68c18c17adb2723f8", [{:ref, "HEAD"}]},
-  "ejson": {:git, "https://github.com/benoitc/ejson.git", "3b81c6a55ac6c0affcf063610c9b8eb0e4468a11", []},
   "gate": {:git, "https://github.com/ananthakumaran/gate.git", "1d1dfa5e3e958cf6e9db668ff62e03697397d259", []},
   "gen_ets": {:git, "git://github.com/norton/gen-ets.git", "0aef2afc1b8ca604be41a06dc017a27e89a2cc0d", []},
   "httpotion": {:git, "git://github.com/myfreeweb/httpotion.git", "f7ed4006c39efde9954ef637abdb5583ac63142d", []},
@@ -7,7 +6,6 @@
   "jsex": {:git, "git://github.com/talentdeficit/jsex.git", "95492e9a4f418c10ff1c74d669d89ca5e8ac4d67", []},
   "jsx": {:git, "git://github.com/talentdeficit/jsx.git", "e50af6e109cb03bd26acf715cbc77de746507d1d", [{:tag, "v1.4.3"}]},
   "lets": {:git, "https://github.com/norton/lets.git", "ab049506f26ae0317e126e8daf2fa0e891cdc6c1", []},
-  "mochiweb": {:git, "git://github.com/mochi/mochiweb.git", "8c2e78e635735568d2e91b57e567ae724825a98a", []},
   "qc": {:git, "git://github.com/norton/qc.git", "5644e39fe3d673ca2607f268d2542ef0268c24d8", []},
   "sext": {:git, "git://github.com/norton/sext.git", "3af54780327d02f5907c732be588e342bc876691", []},
   "strftimerl": {:git, "https://github.com/kennystone/strftimerl", "c72f39c42caa974bf9c7a42ff6e522d09b2ad826", []} ]
