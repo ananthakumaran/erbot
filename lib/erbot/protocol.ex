@@ -37,9 +37,9 @@ defmodule Erbot.Protocol do
   end
 
   def members(m) do
-    case Regex.run(%r/.+ [=*@] (.+) :[^ ]* (.+)/, m, capture: [1, 2]) do
+    case Regex.run(%r/.+ [=*@] (.+) :[^ ]*( .+)?/, m, capture: [1, 2]) do
       [channel, members] ->
-        {channel, String.split(members)}
+        {channel, String.split(members) |> Enum.filter(&(&1 != ""))}
       nil -> :error
     end
   end
